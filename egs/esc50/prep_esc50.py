@@ -11,6 +11,7 @@ import os
 import zipfile
 import wget
 
+
 # label = np.loadtxt('/data/sls/scratch/yuangong/aed-pc/src/utilities/esc50_label.csv', delimiter=',', dtype='str')
 # f = open("/data/sls/scratch/yuangong/aed-pc/src/utilities/esc_class_labels_indices.csv", "w")
 # f.write("index,mid,display_name\n")
@@ -32,8 +33,10 @@ import wget
 def get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir) if os.path.isdir(os.path.join(a_dir, name))]
 
+
 def get_immediate_files(a_dir):
     return [name for name in os.listdir(a_dir) if os.path.isfile(os.path.join(a_dir, name))]
+
 
 # downlooad esc50
 # dataset provided in https://github.com/karolpiczak/ESC-50
@@ -62,7 +65,7 @@ print(label_map)
 if os.path.exists('./data/datafiles') == False:
     os.mkdir('./data/datafiles')
 
-for fold in [1,2,3,4,5]:
+for fold in [1, 2, 3, 4, 5]:
     base_path = "./data/ESC-50-master/audio_16k/"
     meta = np.loadtxt('./data/ESC-50-master/meta/esc50.csv', delimiter=',', dtype='str', skiprows=1)
     train_wav_list = []
@@ -71,19 +74,20 @@ for fold in [1,2,3,4,5]:
         cur_label = label_map[meta[i][3]]
         cur_path = meta[i][0]
         cur_fold = int(meta[i][1])
-        # /m/07rwj is just a dummy prefix
-        cur_dict = {"wav": base_path + cur_path, "labels": '/m/07rwj'+cur_label.zfill(2)}
-        if cur_fold == fold:
-            eval_wav_list.append(cur_dict)
-        else:
-            train_wav_list.append(cur_dict)
+        if int(cur_label) < 30:
+            # /m/07rwj is just a dummy prefix
+            cur_dict = {"wav": base_path + cur_path, "labels": '/m/07rwj' + cur_label.zfill(2)}
+            if cur_fold == fold:
+                eval_wav_list.append(cur_dict)
+            else:
+                train_wav_list.append(cur_dict)
 
     print('fold {:d}: {:d} training samples, {:d} test samples'.format(fold, len(train_wav_list), len(eval_wav_list)))
 
-    with open('./data/datafiles/esc_train_data_'+ str(fold) +'.json', 'w') as f:
+    with open('./data/datafiles/esc_train_data_' + str(fold) + '.json', 'w') as f:
         json.dump({'data': train_wav_list}, f, indent=1)
 
-    with open('./data/datafiles/esc_eval_data_'+ str(fold) +'.json', 'w') as f:
+    with open('./data/datafiles/esc_eval_data_' + str(fold) + '.json', 'w') as f:
         json.dump({'data': eval_wav_list}, f, indent=1)
 
 print('Finished ESC-50 Preparation')
