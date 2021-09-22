@@ -10,25 +10,14 @@ import json
 import os
 import zipfile
 import wget
+import argparse
 
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("--sample_rate", choices=['16000', '44100'], default='16000', help="Sample Rate")
+parser.add_argument("--download_data", default=True)
 
-# label = np.loadtxt('/data/sls/scratch/yuangong/aed-pc/src/utilities/esc50_label.csv', delimiter=',', dtype='str')
-# f = open("/data/sls/scratch/yuangong/aed-pc/src/utilities/esc_class_labels_indices.csv", "w")
-# f.write("index,mid,display_name\n")
-#
-# label_set = []
-# idx = 0
-# for j in range(0, 5):
-#     for i in range(0, 10):
-#         cur_label = label[i][j]
-#         cur_label = cur_label.split(' ')
-#         cur_label = "_".join(cur_label)
-#         cur_label = cur_label.lower()
-#         label_set.append(cur_label)
-#         f.write(str(idx)+',/m/07rwj'+str(idx).zfill(2)+',\"'+cur_label+'\"\n')
-#         idx += 1
-# f.close()
-#
+args = parser.parse_args()
+
 
 def get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir) if os.path.isdir(os.path.join(a_dir, name))]
@@ -38,22 +27,23 @@ def get_immediate_files(a_dir):
     return [name for name in os.listdir(a_dir) if os.path.isfile(os.path.join(a_dir, name))]
 
 
-# downlooad esc50
-# dataset provided in https://github.com/karolpiczak/ESC-50
-if os.path.exists('./data/ESC-50-master') == False:
-    esc50_url = 'https://github.com/karoldvl/ESC-50/archive/master.zip'
-    wget.download(esc50_url, out='./data/')
-    with zipfile.ZipFile('./data/ESC-50-master.zip', 'r') as zip_ref:
-        zip_ref.extractall('./data/')
-    os.remove('./data/ESC-50-master.zip')
+if not os.path.exists('./data/ESC-50-master'):
+    if args.download_data:
+        esc50_url = 'https://github.com/karoldvl/ESC-50/archive/master.zip'
+        wget.download(esc50_url, out='./data/')
+        with zipfile.ZipFile('./data/ESC-50-master.zip', 'r') as zip_ref:
+            zip_ref.extractall('./data/')
+        os.remove('./data/ESC-50-master.zip')
 
     # convert the audio to 16kHz
-    base_dir = './data/ESC-50-master/'
-    os.mkdir('./data/ESC-50-master/audio_16k/')
-    audio_list = get_immediate_files('./data/ESC-50-master/audio')
-    for audio in audio_list:
-        print('sox ' + base_dir + '/audio/' + audio + ' -r 16000 ' + base_dir + '/audio_16k/' + audio)
-        os.system('sox ' + base_dir + '/audio/' + audio + ' -r 16000 ' + base_dir + '/audio_16k/' + audio)
+base_dir = './data/ESC-50-master'
+if int(args.sample_rate) == 16000:
+    if not os.path.exists('./data/ESC-50-master/audio_16k/'):
+        os.mkdir('./data/ESC-50-master/audio_16k/')
+        audio_list = get_immediate_files('./data/ESC-50-master/audio')
+        for audio in audio_list:
+            print('sox ' + base_dir + '/audio/' + audio + ' -r 16000 ' + base_dir + '/audio_16k/' + audio)
+            os.system('sox ' + base_dir + '/audio/' + audio + ' -r 16000 ' + base_dir + '/audio_16k/' + audio)
 
 label_set = np.loadtxt('./data/esc_class_labels_indices.csv', delimiter=',', dtype='str')
 label_map = {}
@@ -62,11 +52,15 @@ for i in range(1, len(label_set)):
 print(label_map)
 
 # fix bug: generate an empty directory to save json files
-if os.path.exists('./data/datafiles') == False:
+if not os.path.exists('./data/datafiles'):
     os.mkdir('./data/datafiles')
 
 for fold in [1, 2, 3, 4, 5]:
-    base_path = "./data/ESC-50-master/audio_16k/"
+    if int(args.sample_rate) == 16000:
+        base_path = "./data/ESC-50-master/audio_16k/"
+    else:
+        base_path = "./data/ESC-50-master/audio/"
+
     meta = np.loadtxt('./data/ESC-50-master/meta/esc50.csv', delimiter=',', dtype='str', skiprows=1)
     train_wav_list = []
     eval_wav_list = []
